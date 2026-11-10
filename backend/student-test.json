@@ -1,0 +1,24 @@
+﻿{
+    "student":  {
+                    "bac_stream":  "Sciences Physiques",
+                    "preferred_fields":  [
+                                             "informatique",
+                                             "genie logiciel"
+                                         ],
+                    "diploma_type":  "DTS",
+                    "city":  "Tinghir",
+                    "preferred_language":  "fr",
+                    "education_level":  "bac_plus_2",
+                    "interests":  [
+                                      "informatique",
+                                      "developpement web"
+                                  ],
+                    "specialization":  "Développement Digital - Web Full Stack",
+                    "semester_averages":  [
+                                              14,
+                                              15,
+                                              16,
+                                              17
+                                          ]
+                }
+}

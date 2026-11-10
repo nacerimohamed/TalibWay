@@ -1,0 +1,45 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Formation extends Model
+{
+    protected $fillable = [
+        'name',
+        'slug',
+        'degree',
+        'institution',
+        'institution_type',
+        'city',
+        'region',
+        'education_levels',
+        'accepted_streams',
+        'fields',
+        'admission_conditions',
+        'admission_method',
+        'minimum_average',
+        'official_url',
+        'source_name',
+        'last_verified',
+        'is_active',
+        'accepted_diplomas',
+        'accepted_specializations',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'education_levels' => 'array',
+            'accepted_streams' => 'array',
+            'fields' => 'array',
+            'admission_conditions' => 'array',
+            'minimum_average' => 'decimal:2',
+            'last_verified' => 'date',
+            'is_active' => 'boolean',
+            'accepted_diplomas' => 'array',
+            'accepted_specializations' => 'array',
+        ];
+    }
+}
