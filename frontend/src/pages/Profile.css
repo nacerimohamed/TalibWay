@@ -1,0 +1,183 @@
+
+.profile-page {
+  min-height: 100vh;
+  background: #f6f8fc;
+  color: #172033;
+}
+
+.profile-header {
+  height: 75px;
+  padding: 0 7%;
+  background: white;
+  border-bottom: 1px solid #e8edf5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-back {
+  background: none;
+  border: none;
+  color: #53627a;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.profile-brand {
+  font-size: 23px;
+  font-weight: 800;
+  color: #2563eb;
+}
+
+.profile-user {
+  color: #53627a;
+  font-size: 14px;
+}
+
+.profile-container {
+  max-width: 850px;
+  margin: 45px auto;
+  padding: 0 20px 50px;
+}
+
+.profile-intro {
+  margin-bottom: 30px;
+}
+
+.profile-tag {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.profile-intro h1 {
+  font-size: 32px;
+  margin: 12px 0;
+}
+
+.profile-intro p,
+.profile-hint {
+  color: #718096;
+  line-height: 1.7;
+}
+
+.profile-form {
+  background: white;
+  padding: 32px;
+  border: 1px solid #e8edf5;
+  border-radius: 16px;
+}
+
+.profile-section {
+  margin-bottom: 35px;
+}
+
+.profile-section h2 {
+  font-size: 19px;
+  margin-bottom: 22px;
+}
+
+.profile-section > label,
+.grades-grid label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 17px 0 8px;
+}
+
+.profile-section input:not([type="checkbox"]),
+.profile-section select {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #dce3ee;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+  outline: none;
+}
+
+.profile-section input:focus,
+.profile-section select:focus {
+  border-color: #2563eb;
+}
+
+.grades-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.grades-grid label {
+  margin-top: 0;
+}
+
+.fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.field-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e0e7f1;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.field-option input {
+  accent-color: #2563eb;
+}
+
+.profile-submit {
+  width: 100%;
+  padding: 15px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 9px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profile-submit:hover {
+  background: #1d4ed8;
+}
+
+.profile-message {
+  padding: 13px;
+  margin-bottom: 18px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .profile-header {
+    padding: 0 16px;
+  }
+
+  .profile-container {
+    margin-top: 30px;
+  }
+
+  .profile-form {
+    padding: 20px;
+  }
+
+  .profile-intro h1 {
+    font-size: 26px;
+  }
+
+  .grades-grid,
+  .fields-grid {
+    grid-template-columns: 1fr;
+  }
+}
