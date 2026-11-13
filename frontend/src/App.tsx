@@ -7,6 +7,8 @@ import Register from './pages/Register'
 import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
+import Recommendations from './pages/Recommendations'
+import Catalogue from './pages/Catalogue'
 
 type Language = 'fr' | 'ar'
 
@@ -106,6 +108,7 @@ function Home() {
         <nav className="nav-links">
           <a href="#home">{t.home}</a>
           <a href="#formations">{t.formations}</a>
+          <Link to="/catalogue">Catalogue</Link>
           <a href="#how">{t.how}</a>
           <a href="#about">{t.about}</a>
         </nav>
@@ -290,6 +293,8 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard/profile" element={<Profile />} />
+        <Route path="/dashboard/recommendations" element={<Recommendations />} />
+        <Route path="/catalogue" element={<Catalogue />} />
       </Route>
     </Routes>
   )

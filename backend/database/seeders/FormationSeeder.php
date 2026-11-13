@@ -43,7 +43,7 @@ class FormationSeeder extends Seeder
                 'official_url' => null,
                 'source_name' => 'Données de démonstration',
                 'last_verified' => null,
-                'is_active' => true,
+                'is_active' => false,
             ],
 
             [
@@ -76,7 +76,7 @@ class FormationSeeder extends Seeder
                 'official_url' => null,
                 'source_name' => 'Données de démonstration',
                 'last_verified' => null,
-                'is_active' => true,
+                'is_active' => false,
             ],
 
             [
@@ -109,7 +109,7 @@ class FormationSeeder extends Seeder
                 'official_url' => null,
                 'source_name' => 'Données de démonstration',
                 'last_verified' => null,
-                'is_active' => true,
+                'is_active' => false,
             ],
         ];
 

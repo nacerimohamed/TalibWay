@@ -1,5 +1,7 @@
 
+from datetime import date
 from typing import Literal
+
 from pydantic import BaseModel, Field, HttpUrl
 
 
@@ -10,9 +12,8 @@ class Formation(BaseModel):
     city: str = Field(min_length=2, max_length=100)
 
     education_levels: list[str] = Field(min_length=1)
-    accepted_streams: list[str] = Field(min_length=1)
+    accepted_streams: list[str] = Field(default_factory=list)
 
-    # Accepted diploma requirements
     accepted_diplomas: list[str] = Field(default_factory=list)
     accepted_specializations: list[str] = Field(default_factory=list)
 
@@ -27,4 +28,17 @@ class Formation(BaseModel):
 
     official_url: HttpUrl | None = None
     source_name: str | None = None
-    last_verified: str | None = None
+    last_verified: date | None = None
+
+    academic_year: str | None = Field(default=None, max_length=9)
+
+    verification_status: Literal[
+        "verified", "needs_review", "unverified"
+    ] = "needs_review"
+
+    application_status: Literal[
+        "open", "closed", "not_announced"
+    ] = "not_announced"
+
+    application_start_date: date | None = None
+    application_end_date: date | None = None

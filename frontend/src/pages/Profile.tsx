@@ -1,8 +1,22 @@
 
-import { useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { apiRequest } from '../services/api'
 import './Profile.css'
+
+interface StudentProfile {
+  education_level: string
+  bac_stream: string
+  diploma: string | null
+  specialization: string | null
+  city: string
+  s1: string | null
+  s2: string | null
+  s3: string | null
+  s4: string | null
+  fields: string[] | null
+}
 
 function Profile() {
   const { user } = useAuth()
@@ -13,12 +27,16 @@ function Profile() {
   const [diploma, setDiploma] = useState('')
   const [specialization, setSpecialization] = useState('')
   const [city, setCity] = useState('')
+
   const [s1, setS1] = useState('')
   const [s2, setS2] = useState('')
   const [s3, setS3] = useState('')
   const [s4, setS4] = useState('')
+
   const [fields, setFields] = useState<string[]>([])
   const [message, setMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const availableFields = [
     'Informatique',
@@ -30,6 +48,42 @@ function Profile() {
     'Gestion',
   ]
 
+  // Charger le profil depuis Laravel
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const data = await apiRequest('/student-profile')
+
+        const profile: StudentProfile | null = data.profile
+
+        if (profile) {
+          setLevel(profile.education_level)
+          setStream(profile.bac_stream || '')
+          setDiploma(profile.diploma || '')
+          setSpecialization(profile.specialization || '')
+          setCity(profile.city || '')
+
+          setS1(profile.s1 || '')
+          setS2(profile.s2 || '')
+          setS3(profile.s3 || '')
+          setS4(profile.s4 || '')
+
+          setFields(profile.fields || [])
+        }
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : 'Impossible de charger votre profil.'
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProfile()
+  }, [])
+
   function toggleField(field: string) {
     setFields((current) =>
       current.includes(field)
@@ -38,17 +92,61 @@ function Profile() {
     )
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  // Enregistrer le profil dans Laravel
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setMessage('Formulaire prêt. La prochaine étape sera de connecter ces données au Backend.')
+    setMessage('')
+    setSaving(true)
+
+    const profileData = {
+      education_level: level,
+      bac_stream: stream,
+      diploma: level === 'bac' ? null : diploma || null,
+      specialization: level === 'bac' ? null : specialization || null,
+      city,
+      s1: level === 'bac_plus_2' ? Number(s1) : null,
+      s2: level === 'bac_plus_2' ? Number(s2) : null,
+      s3: level === 'bac_plus_2' ? Number(s3) : null,
+      s4: level === 'bac_plus_2' ? Number(s4) : null,
+      fields,
+    }
+
+    try {
+      const data = await apiRequest('/student-profile', {
+        method: 'PUT',
+        body: JSON.stringify(profileData),
+      })
+
+      setMessage(data.message || 'Profil enregistré avec succès.')
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Une erreur est survenue pendant l’enregistrement.'
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="profile-page">
+        <p>Chargement de votre profil...</p>
+      </div>
+    )
   }
 
   return (
     <div className="profile-page">
       <header className="profile-header">
-        <button className="profile-back" onClick={() => navigate('/dashboard')}>
+        <button
+          className="profile-back"
+          onClick={() => navigate('/dashboard')}
+        >
           ← Dashboard
         </button>
+
         <span className="profile-brand">TalibWay</span>
         <span className="profile-user">{user?.name}</span>
       </header>
@@ -68,7 +166,11 @@ function Profile() {
             <h2>01. Votre parcours académique</h2>
 
             <label>Niveau d'études actuel</label>
-            <select value={level} onChange={(e) => setLevel(e.target.value)} required>
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              required
+            >
               <option value="bac">Baccalauréat</option>
               <option value="bac_plus_2">Bac +2</option>
               <option value="bac_plus_3">Bac +3</option>
@@ -89,7 +191,6 @@ function Profile() {
                   value={diploma}
                   onChange={(e) => setDiploma(e.target.value)}
                   placeholder="Ex : DTS"
-                  required
                 />
 
                 <label>Spécialité</label>
@@ -97,7 +198,6 @@ function Profile() {
                   value={specialization}
                   onChange={(e) => setSpecialization(e.target.value)}
                   placeholder="Ex : Développement Digital - Web Full Stack"
-                  required
                 />
               </>
             )}
@@ -114,6 +214,7 @@ function Profile() {
           {level === 'bac_plus_2' && (
             <section className="profile-section">
               <h2>02. Vos notes semestrielles</h2>
+
               <p className="profile-hint">
                 S1 et S2 : première année. S3 et S4 : deuxième année.
               </p>
@@ -121,23 +222,54 @@ function Profile() {
               <div className="grades-grid">
                 <div>
                   <label>S1</label>
-                  <input type="number" min="0" max="20" step="0.01"
-                    value={s1} onChange={(e) => setS1(e.target.value)} required />
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.01"
+                    value={s1}
+                    onChange={(e) => setS1(e.target.value)}
+                    required
+                  />
                 </div>
+
                 <div>
                   <label>S2</label>
-                  <input type="number" min="0" max="20" step="0.01"
-                    value={s2} onChange={(e) => setS2(e.target.value)} required />
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.01"
+                    value={s2}
+                    onChange={(e) => setS2(e.target.value)}
+                    required
+                  />
                 </div>
+
                 <div>
                   <label>S3</label>
-                  <input type="number" min="0" max="20" step="0.01"
-                    value={s3} onChange={(e) => setS3(e.target.value)} required />
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.01"
+                    value={s3}
+                    onChange={(e) => setS3(e.target.value)}
+                    required
+                  />
                 </div>
+
                 <div>
                   <label>S4</label>
-                  <input type="number" min="0" max="20" step="0.01"
-                    value={s4} onChange={(e) => setS4(e.target.value)} required />
+                  <input
+                    type="number"
+                    min="0"
+                    max="20"
+                    step="0.01"
+                    value={s4}
+                    onChange={(e) => setS4(e.target.value)}
+                    required
+                  />
                 </div>
               </div>
             </section>
@@ -145,6 +277,7 @@ function Profile() {
 
           <section className="profile-section">
             <h2>03. Vos domaines d'intérêt</h2>
+
             <p className="profile-hint">
               Sélectionnez un ou plusieurs domaines.
             </p>
@@ -163,10 +296,18 @@ function Profile() {
             </div>
           </section>
 
-          {message && <p className="profile-message">{message}</p>}
+          {message && (
+            <p className="profile-message" role="status">
+              {message}
+            </p>
+          )}
 
-          <button className="profile-submit" type="submit">
-            Enregistrer mon profil
+          <button
+            className="profile-submit"
+            type="submit"
+            disabled={saving}
+          >
+            {saving ? 'Enregistrement...' : 'Enregistrer mon profil'}
           </button>
         </form>
       </main>

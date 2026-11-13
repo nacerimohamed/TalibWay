@@ -26,20 +26,30 @@ class Formation extends Model
         'is_active',
         'accepted_diplomas',
         'accepted_specializations',
+        'academic_year',
+'verification_status',
+'application_status',
+'application_start_date',
+'application_end_date',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'education_levels' => 'array',
-            'accepted_streams' => 'array',
-            'fields' => 'array',
-            'admission_conditions' => 'array',
-            'minimum_average' => 'decimal:2',
-            'last_verified' => 'date',
-            'is_active' => 'boolean',
-            'accepted_diplomas' => 'array',
-            'accepted_specializations' => 'array',
-        ];
-    }
+protected function casts(): array
+{
+    return [
+        'education_levels' => 'array',
+        'accepted_streams' => 'array',
+        'fields' => 'array',
+        'admission_conditions' => 'array',
+        'minimum_average' => 'decimal:2',
+        'last_verified' => 'date',
+        'is_active' => 'boolean',
+        'accepted_diplomas' => 'array',
+        'accepted_specializations' => 'array',
+        'academic_year' => 'string',
+        'verification_status' => 'string',
+        'application_status' => 'string',
+        'application_start_date' => 'date',
+        'application_end_date' => 'date',
+    ];
+}
 }

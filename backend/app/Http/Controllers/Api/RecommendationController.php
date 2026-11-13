@@ -11,29 +11,16 @@ class RecommendationController extends Controller
 {
     public function recommend(Request $request)
     {
-        $validated = $request->validate([
-            'student.education_level' => 'required|in:bac,bac_plus_2,bac_plus_3',
-            'student.bac_stream' => 'required|string|min:2|max:100',
+        // 1. Get the authenticated student's saved profile
+        $profile = $request->user()->studentProfile;
 
-            'student.average' => 'required_unless:student.education_level,bac_plus_2|nullable|numeric|min:0|max:20',
+        if (!$profile) {
+            return response()->json([
+                'message' => 'Veuillez compléter votre profil étudiant avant de demander des recommandations.',
+            ], 422);
+        }
 
-            'student.semester_averages' => 'required_if:student.education_level,bac_plus_2|array|size:4',
-            'student.semester_averages.*' => 'numeric|min:0|max:20',
-
-            'student.diploma_type' => 'nullable|string|max:100',
-            'student.specialization' => 'nullable|string|max:150',
-
-            'student.city' => 'required|string|min:2|max:100',
-
-            'student.interests' => 'required|array|min:1|max:10',
-            'student.interests.*' => 'string|max:100',
-
-            'student.preferred_fields' => 'required|array|min:1|max:10',
-            'student.preferred_fields.*' => 'string|max:100',
-
-            'student.preferred_language' => 'sometimes|in:ar,fr,en',
-        ]);
-
+        // 2. Check that formations are available
         $formations = Formation::where('is_active', true)->get();
 
         if ($formations->isEmpty()) {
@@ -43,11 +30,57 @@ class RecommendationController extends Controller
             ]);
         }
 
+        // 3. Convert the saved profile into the Python API format
+        $fields = $profile->fields ?? [];
+
+        $student = [
+            'education_level' => $profile->education_level,
+            'bac_stream' => $profile->bac_stream,
+            'city' => $profile->city,
+
+            'interests' => $fields,
+            'preferred_fields' => $fields,
+
+            'preferred_language' => 'fr',
+
+            'diploma_type' => $profile->diploma,
+            'specialization' => $profile->specialization,
+        ];
+
+        // Bac+2 requires exactly four semester averages
+        if ($profile->education_level === 'bac_plus_2') {
+            $semesterAverages = [
+                $profile->s1,
+                $profile->s2,
+                $profile->s3,
+                $profile->s4,
+            ];
+
+            if (in_array(null, $semesterAverages, true)) {
+                return response()->json([
+                    'message' => 'Les quatre moyennes semestrielles sont nécessaires pour générer les recommandations.',
+                ], 422);
+            }
+
+            $student['semester_averages'] = array_map(
+                fn ($average) => (float) $average,
+                $semesterAverages
+            );
+        } else {
+            // Bac and Bac+3 require an overall average
+            $student['average'] = null;
+
+            return response()->json([
+                'message' => 'Le calcul des recommandations pour ce niveau nécessite une moyenne générale.',
+            ], 422);
+        }
+
+        // 4. Send the profile and formations to FastAPI
         try {
             $response = Http::timeout(30)->post(
                 'http://127.0.0.1:8001/recommendations',
                 [
-                    'student' => $validated['student'],
+                    'student' => $student,
 
                     'formations' => $formations->map(function ($formation) {
                         return [
@@ -70,6 +103,17 @@ class RecommendationController extends Controller
                             'official_url' => $formation->official_url,
                             'source_name' => $formation->source_name,
                             'last_verified' => $formation->last_verified?->format('Y-m-d'),
+
+                            
+                            'academic_year' => $formation->academic_year,
+
+'verification_status' => $formation->verification_status,
+
+'application_status' => $formation->application_status,
+
+'application_start_date' => $formation->application_start_date?->format('Y-m-d'),
+
+'application_end_date' => $formation->application_end_date?->format('Y-m-d'),
                         ];
                     })->values()->all(),
                 ]

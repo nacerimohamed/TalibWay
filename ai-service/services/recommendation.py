@@ -15,14 +15,28 @@ def normalize(value: str) -> str:
     )
 
 
+def normalize_diploma(value: str) -> str:
+    value = normalize(value)
+
+    aliases = {
+        "dts": "dts",
+        "diplome de technicien specialise": "dts",
+        "brevet de technicien specialise": "dts",
+        "bts": "bts",
+        "dut": "dut",
+        "deug": "deug",
+        "deust": "deust",
+    }
+
+    return aliases.get(value, value)
+
+
 def recommend_formations(
     student: StudentProfile,
     formations: list[Formation]
 ) -> list[dict]:
 
     recommendations = []
-
-    student_stream = normalize(student.bac_stream)
 
     student_fields = {
         normalize(field)
@@ -35,7 +49,7 @@ def recommend_formations(
     }
 
     student_diploma = (
-        normalize(student.diploma_type)
+        normalize_diploma(student.diploma_type)
         if student.diploma_type else None
     )
 
@@ -46,17 +60,17 @@ def recommend_formations(
 
     for formation in formations:
         score = 0
+        possible_score = 0
+
         reasons = []
         warnings = []
         failed_conditions = []
         missing_information = []
 
-        # 1. Education level compatibility (40 points)
-        level_match = (
-            student.education_level in formation.education_levels
-        )
+        # 1. Niveau d'études : 40 points
+        possible_score += 40
 
-        if level_match:
+        if student.education_level in formation.education_levels:
             score += 40
             reasons.append("Niveau d'études compatible")
         else:
@@ -64,80 +78,95 @@ def recommend_formations(
                 "Niveau d'études non accepté par la formation."
             )
 
-        # 2. Bac stream compatibility (30 points)
-        accepted_streams = {
-            normalize(stream)
-            for stream in formation.accepted_streams
-        }
+        # 2. Filière du Bac : uniquement si elle est pertinente
+        # et explicitement renseignée par l'établissement.
+        if (
+            student.education_level == "bac"
+            and formation.accepted_streams
+        ):
+            possible_score += 30
 
-        stream_match = student_stream in accepted_streams
+            accepted_streams = {
+                normalize(stream)
+                for stream in formation.accepted_streams
+            }
 
-        if stream_match:
-            score += 30
-            reasons.append("Filière du baccalauréat compatible")
-        else:
-            failed_conditions.append(
-                "Filière du baccalauréat non acceptée."
+            student_stream = normalize(student.bac_stream)
+
+            if student_stream in accepted_streams:
+                score += 30
+                reasons.append("Filière du baccalauréat compatible")
+            else:
+                failed_conditions.append(
+                    "Filière du baccalauréat non acceptée."
+                )
+
+        elif student.education_level == "bac":
+            warnings.append(
+                "Les filières du baccalauréat acceptées "
+                "ne sont pas précisées."
             )
 
-        # 3. Preferred fields compatibility (20 points)
-        formation_fields = {
-            normalize(field)
-            for field in formation.fields
-        }
-
-        matching_fields = student_fields.intersection(
-            formation_fields
-        )
-
+        # 3. Domaines souhaités : 20 points
         if student_fields:
+            possible_score += 20
+
+            formation_fields = {
+                normalize(field)
+                for field in formation.fields
+            }
+
+            matching_fields = student_fields.intersection(
+                formation_fields
+            )
+
             score += (
                 len(matching_fields) / len(student_fields)
             ) * 20
 
-        if matching_fields:
-            reasons.append(
-                "Domaines souhaités : "
-                + ", ".join(sorted(matching_fields))
+            if matching_fields:
+                reasons.append(
+                    "Domaines souhaités correspondants : "
+                    + ", ".join(sorted(matching_fields))
+                )
+
+        # 4. Centres d'intérêt : 10 points
+        if student_interests:
+            possible_score += 10
+
+            formation_fields = {
+                normalize(field)
+                for field in formation.fields
+            }
+
+            matching_interests = student_interests.intersection(
+                formation_fields
             )
 
-        # 4. Interests compatibility (10 points)
-        matching_interests = student_interests.intersection(
-            formation_fields
-        )
-
-        if student_interests:
             score += (
                 len(matching_interests) / len(student_interests)
             ) * 10
 
-        if matching_interests:
-            reasons.append(
-                "Correspondance avec les centres d'intérêt"
-            )
+            if matching_interests:
+                reasons.append(
+                    "Correspondance avec les centres d'intérêt"
+                )
 
-        # 5. Minimum average
-        average_ok = (
-            formation.minimum_average is None
-            or (
-                student.average is not None
-                and student.average >= formation.minimum_average
-            )
-        )
+        # 5. Moyenne minimale
+        if formation.minimum_average is not None:
+            if student.average is None:
+                missing_information.append(
+                    "Moyenne de l'étudiant non renseignée."
+                )
+            elif student.average < formation.minimum_average:
+                failed_conditions.append(
+                    f"Moyenne minimale requise : "
+                    f"{formation.minimum_average}/20."
+                )
+            else:
+                reasons.append("Moyenne minimale respectée")
 
-        if not average_ok:
-            failed_conditions.append(
-                f"Moyenne minimale requise : "
-                f"{formation.minimum_average}/20."
-            )
-        elif formation.minimum_average is not None:
-            reasons.append("Moyenne minimale respectée")
-        else:
-            missing_information.append(
-                "Aucune moyenne minimale officielle renseignée."
-            )
-
-        # 6. Diploma compatibility
+        # 6. Compatibilité du diplôme Bac+2
         if student.education_level == "bac_plus_2":
 
             if not student_diploma:
@@ -147,23 +176,24 @@ def recommend_formations(
 
             elif not formation.accepted_diplomas:
                 missing_information.append(
-                    "Les diplômes Bac+2 acceptés ne sont pas renseignés."
+                    "Les diplômes Bac+2 acceptés ne sont pas précisés."
                 )
 
             else:
                 accepted_diplomas = {
-                    normalize(diploma)
+                    normalize_diploma(diploma)
                     for diploma in formation.accepted_diplomas
                 }
 
-                if student_diploma not in accepted_diplomas:
-                    failed_conditions.append(
-                        "Type de diplôme non accepté selon les données disponibles."
-                    )
-                else:
+                if student_diploma in accepted_diplomas:
                     reasons.append("Type de diplôme compatible")
+                else:
+                    failed_conditions.append(
+                        "Type de diplôme non accepté selon "
+                        "les conditions renseignées."
+                    )
 
-            # 7. Specialization compatibility
+            # 7. Compatibilité de la spécialisation
             if not student_specialization:
                 missing_information.append(
                     "Spécialisation du diplôme non renseignée."
@@ -171,31 +201,44 @@ def recommend_formations(
 
             elif not formation.accepted_specializations:
                 missing_information.append(
-                    "Les spécialités acceptées ne sont pas renseignées."
+                    "Les spécialités acceptées ne sont pas précisées."
                 )
 
             else:
                 accepted_specializations = {
-                    normalize(specialization)
-                    for specialization in formation.accepted_specializations
+                    normalize(item)
+                    for item in formation.accepted_specializations
                 }
 
-                if student_specialization not in accepted_specializations:
-                    failed_conditions.append(
-                        "Spécialisation non acceptée selon les données disponibles."
-                    )
+                if student_specialization in accepted_specializations:
+                    reasons.append("Spécialisation compatible")
                 else:
-                    reasons.append(
-                        "Spécialisation compatible"
+                    # Une différence de formulation ne prouve
+                    # pas automatiquement une inéligibilité.
+                    missing_information.append(
+                        "L'équivalence de la spécialisation "
+                        "doit être confirmée par l'établissement."
                     )
 
-        # 8. Final eligibility status
+        # 8. Vérification de la source
+        if formation.verification_status != "verified":
+            missing_information.append(
+                "Les informations de cette formation "
+                "nécessitent une vérification officielle."
+            )
+
+        # 9. Score normalisé sur 100
+        final_score = (
+            round((score / possible_score) * 100, 2)
+            if possible_score > 0
+            else 0
+        )
+
+        # 10. Statut d'éligibilité
         if failed_conditions:
             eligibility = "not_eligible"
-
         elif missing_information:
             eligibility = "needs_verification"
-
         else:
             eligibility = "potentially_eligible"
 
@@ -204,7 +247,8 @@ def recommend_formations(
 
         if formation.admission_conditions:
             warnings.append(
-                "Vérifier les conditions complémentaires d'admission."
+                "Vérifier les conditions complémentaires "
+                "et les modalités de sélection."
             )
         else:
             warnings.append(
@@ -214,7 +258,7 @@ def recommend_formations(
 
         recommendations.append({
             "formation": formation.model_dump(mode="json"),
-            "score": round(score, 2),
+            "score": final_score,
             "eligibility": eligibility,
             "reasons": reasons,
             "warnings": warnings

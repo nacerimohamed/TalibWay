@@ -8,9 +8,15 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\StudentProfile;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
+    public function studentProfile(): HasOne
+{
+    return $this->hasOne(StudentProfile::class);
+}
     use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [

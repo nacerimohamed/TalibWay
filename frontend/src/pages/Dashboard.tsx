@@ -38,10 +38,13 @@ function Dashboard() {
             Mon profil
           </a>
 
-          <a href="#recommendations" className="dashboard-nav-link">
-            <span>✦</span>
-            Mes recommandations
-          </a>
+          <Link
+  to="/dashboard/recommendations"
+  className="dashboard-nav-link"
+>
+  <span>✦</span>
+  Mes recommandations
+</Link>
 
           <a href="#formations" className="dashboard-nav-link">
             <span>▤</span>
