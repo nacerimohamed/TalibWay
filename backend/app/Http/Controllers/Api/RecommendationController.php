@@ -11,7 +11,7 @@ class RecommendationController extends Controller
 {
     public function recommend(Request $request)
     {
-        // 1. Get the authenticated student's saved profile
+        // 1. Récupérer le profil de l'étudiant connecté
         $profile = $request->user()->studentProfile;
 
         if (!$profile) {
@@ -20,22 +20,33 @@ class RecommendationController extends Controller
             ], 422);
         }
 
-        // 2. Check that formations are available
+        // 2. Vérifier le parcours Collège
+        if (
+            $profile->education_level === 'college'
+            && !in_array($profile->college_stream, ['lettres', 'sciences'], true)
+        ) {
+            return response()->json([
+                'message' => 'Veuillez choisir un parcours : Lettres ou Sciences.',
+            ], 422);
+        }
+
+        // 3. Récupérer les formations actives
         $formations = Formation::where('is_active', true)->get();
 
         if ($formations->isEmpty()) {
             return response()->json([
-                'message' => 'Aucune formation disponible.',
+                'message' => 'Aucune formation disponible pour le moment.',
                 'recommendations' => [],
             ]);
         }
 
-        // 3. Convert the saved profile into the Python API format
+        // 4. Préparer les informations de l'étudiant
         $fields = $profile->fields ?? [];
 
         $student = [
             'education_level' => $profile->education_level,
             'bac_stream' => $profile->bac_stream,
+            'college_stream' => $profile->college_stream,
             'city' => $profile->city,
 
             'interests' => $fields,
@@ -47,8 +58,14 @@ class RecommendationController extends Controller
             'specialization' => $profile->specialization,
         ];
 
-        // Bac+2 requires exactly four semester averages
-        if ($profile->education_level === 'bac_plus_2') {
+        // 5. Gérer les moyennes selon le niveau d'études
+        if ($profile->education_level === 'college') {
+
+            // Pas de moyenne générale obligatoire pour Collège.
+            $student['average'] = null;
+
+        } elseif ($profile->education_level === 'bac_plus_2') {
+
             $semesterAverages = [
                 $profile->s1,
                 $profile->s2,
@@ -66,16 +83,17 @@ class RecommendationController extends Controller
                 fn ($average) => (float) $average,
                 $semesterAverages
             );
-        } else {
-            // Bac and Bac+3 require an overall average
-            $student['average'] = null;
 
+        } else {
+
+            // Le modèle actuel ne possède pas encore de colonne
+            // pour enregistrer la moyenne générale de Bac et Bac+3.
             return response()->json([
-                'message' => 'Le calcul des recommandations pour ce niveau nécessite une moyenne générale.',
+                'message' => 'Le stockage de la moyenne générale pour ce niveau doit être configuré avant de générer les recommandations.',
             ], 422);
         }
 
-        // 4. Send the profile and formations to FastAPI
+        // 6. Envoyer les données au service Python
         try {
             $response = Http::timeout(30)->post(
                 'http://127.0.0.1:8001/recommendations',
@@ -100,25 +118,23 @@ class RecommendationController extends Controller
                             'admission_method' => $formation->admission_method ?? 'unknown',
 
                             'minimum_average' => $formation->minimum_average,
+
                             'official_url' => $formation->official_url,
                             'source_name' => $formation->source_name,
                             'last_verified' => $formation->last_verified?->format('Y-m-d'),
 
-                            
                             'academic_year' => $formation->academic_year,
+                            'verification_status' => $formation->verification_status,
 
-'verification_status' => $formation->verification_status,
-
-'application_status' => $formation->application_status,
-
-'application_start_date' => $formation->application_start_date?->format('Y-m-d'),
-
-'application_end_date' => $formation->application_end_date?->format('Y-m-d'),
+                            'application_status' => $formation->application_status,
+                            'application_start_date' => $formation->application_start_date?->format('Y-m-d'),
+                            'application_end_date' => $formation->application_end_date?->format('Y-m-d'),
                         ];
                     })->values()->all(),
                 ]
             );
 
+            // 7. Vérifier la réponse Python
             if ($response->failed()) {
                 return response()->json([
                     'message' => 'AI service returned an error.',
@@ -129,6 +145,7 @@ class RecommendationController extends Controller
             return response()->json($response->json());
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
+
             return response()->json([
                 'message' => 'AI service is unavailable. Make sure FastAPI is running.',
             ], 503);

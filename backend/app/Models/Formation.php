@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Formation extends Model
 {
@@ -51,5 +52,9 @@ protected function casts(): array
         'application_start_date' => 'date',
         'application_end_date' => 'date',
     ];
+}
+public function institution(): BelongsTo
+{
+    return $this->belongsTo(Institution::class);
 }
 }
